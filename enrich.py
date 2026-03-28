@@ -1,5 +1,4 @@
 from supabase import create_client
-from rapidfuzz import fuzz
 from dotenv import load_dotenv
 import os
 load_dotenv()
