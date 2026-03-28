@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Query
 from typing import Optional
 import asyncio
-from enrich import enrich_people  # your existing fuzzy match function
+from enrich import enrich_people  # your fuzzy match function
 
 app = FastAPI(title="Enrichment API", version="1.0")
 
@@ -12,7 +12,7 @@ def health():
 
 
 @app.api_route("/skills/enrich_people", methods=["GET", "POST"])
-async def enrich_people(
+async def enrich_people_endpoint(  # <-- rename this
     request: Request,
     name: Optional[str] = Query(None),
     email: Optional[str] = Query(None),
@@ -32,11 +32,10 @@ async def enrich_people(
                     email = body.get("email", email)
                     address = body.get("address", address)
             except Exception:
-                # no JSON or invalid, fall back to query params
                 pass
 
         # --- 2. Call enrichment logic ---
-        result = enrich_people(name=name, email=email, address=address)
+        result = enrich_people(name=name, email=email, address=address)  # now calls imported function
 
         # support async logic
         if asyncio.iscoroutine(result):
@@ -62,7 +61,6 @@ async def enrich_people(
         }
 
     except Exception as e:
-        # Catch-all for debugging
         return {
             "input": {
                 "name": name,
