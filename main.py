@@ -21,7 +21,7 @@ class EnrichRequest(BaseModel):
 def health():
 
     return {"status": "ok"}
-@app.post("/skills/enrich_people")
+@app.post("/skills/enrich_people",methods=["POST","GET"])
 
 def enrich_endpoint(req: EnrichRequest):
 
