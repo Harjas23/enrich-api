@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Query
-from typing import Optional, Dict, Any
+from typing import Optional
 import asyncio
-from enrich import enrich_people_logic  # your existing fuzzy match function
+from enrich import enrich_people  # your existing fuzzy match function
 
 app = FastAPI(title="Enrichment API", version="1.0")
 
@@ -36,7 +36,7 @@ async def enrich_people(
                 pass
 
         # --- 2. Call enrichment logic ---
-        result = enrich_people_logic(name=name, email=email, address=address)
+        result = enrich_people(name=name, email=email, address=address)
 
         # support async logic
         if asyncio.iscoroutine(result):
