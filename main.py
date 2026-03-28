@@ -1,40 +1,57 @@
-from fastapi import FastAPI, Query, Body
+from fastapi import FastAPI, Request, Query
 from typing import Optional, Dict, Any
 import asyncio
-from enrich import enrich_people  # your fuzzy match function
+from enrich import enrich_people_logic  # your existing fuzzy match function
 
-app = FastAPI()
+app = FastAPI(title="Enrichment API", version="1.0")
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
+
 @app.api_route("/skills/enrich_people", methods=["GET", "POST"])
 async def enrich_people(
+    request: Request,
     name: Optional[str] = Query(None),
     email: Optional[str] = Query(None),
-    address: Optional[str] = Query(None),
-    body: Optional[Dict[str, Any]] = Body(default=None, embed=True)  # <-- embed=True
+    address: Optional[str] = Query(None)
 ):
+    """
+    Supports both GET (query params) and POST (JSON body).
+    Returns top fuzzy match only.
+    """
     try:
-        # body is now a proper dict
-        if body:
-            name = body.get("name", name)
-            email = body.get("email", email)
-            address = body.get("address", address)
+        # --- 1. Read POST JSON body if present ---
+        if request.method == "POST":
+            try:
+                body = await request.json()
+                if isinstance(body, dict):
+                    name = body.get("name", name)
+                    email = body.get("email", email)
+                    address = body.get("address", address)
+            except Exception:
+                # no JSON or invalid, fall back to query params
+                pass
 
-        # call enrich logic
-        result = enrich_people(name=name, email=email, address=address)
+        # --- 2. Call enrichment logic ---
+        result = enrich_people_logic(name=name, email=email, address=address)
+
+        # support async logic
         if asyncio.iscoroutine(result):
             result = await result
 
-        # ensure JSON serializable
-        if not isinstance(result, (dict, list)):
+        # --- 3. Ensure JSON serializable ---
+        if result is None:
+            result = {}
+        elif not isinstance(result, (dict, list)):
             try:
                 result = dict(result)
             except Exception:
                 result = {"value": result}
 
+        # --- 4. Return structured response ---
         return {
             "input": {
                 "name": name,
@@ -45,6 +62,7 @@ async def enrich_people(
         }
 
     except Exception as e:
+        # Catch-all for debugging
         return {
             "input": {
                 "name": name,
