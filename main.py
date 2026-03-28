@@ -1,40 +1,47 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from typing import Optional
+from fastapi import FastAPI, Query, Body
+from typing import Optional, Dict, Any
 
-from enrich import enrich_people
+from enrich import enrich_people  # your fuzzy match function
 
 app = FastAPI(
     title="Enrichment API",
-    description="Fuzzy people enrichment via Supabase",
+    description="People enrichment using fuzzy matching",
     version="1.0"
 )
 
-
-class EnrichRequest(BaseModel):
-
-    name: Optional[str] = None
-    email: Optional[str] = None
-    address: Optional[str] = None
-
+# health check (required for Render + debugging)
 @app.get("/health")
 def health():
-
     return {"status": "ok"}
-@app.post("/skills/enrich_people",methods=["POST","GET"])
 
-def enrich_endpoint(req: EnrichRequest):
 
+# skill endpoint (Claude compatible)
+@app.api_route("/skills/enrich_people", methods=["GET", "POST"])
+async def enrich_people(
+    name: Optional[str] = Query(None),
+    email: Optional[str] = Query(None),
+    address: Optional[str] = Query(None),
+    body: Optional[Dict[str, Any]] = Body(None)
+):
+
+    # if JSON body provided (POST), override query params
+    if body:
+        name = body.get("name", name)
+        email = body.get("email", email)
+        address = body.get("address", address)
+
+    # call enrichment logic
     result = enrich_people(
-
-        name=req.name,
-        email=req.email,
-        address=req.address
+        name=name,
+        email=email,
+        address=address
     )
 
     return {
-
-        "success": True,
-
-        "result": result
+        "input": {
+            "name": name,
+            "email": email,
+            "address": address
+        },
+        "match": result
     }
